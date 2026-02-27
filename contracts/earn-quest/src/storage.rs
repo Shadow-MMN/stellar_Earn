@@ -1,4 +1,6 @@
 use crate::errors::Error;
+use crate::types::{Quest, QuestStatus, Submission, SubmissionStatus, UserStats, EscrowInfo};
+use soroban_sdk::{contracttype, Address, Env, Symbol, Vec};
 use crate::types::{
     CreatorStats, EscrowInfo, PlatformStats, Quest, QuestStatus, Submission, SubmissionStatus,
     UserStats,

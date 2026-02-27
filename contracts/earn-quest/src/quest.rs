@@ -99,6 +99,44 @@ pub fn register_quests_batch(
     Ok(())
 }
 
+/// Pause a quest (admin only).
+///
+/// Validates:
+/// - Quest exists
+/// - Status transition (Active -> Paused) is valid
+pub fn pause_quest(env: &Env, id: &Symbol, caller: &Address) -> Result<(), Error> {
+    let quest = storage::get_quest(env, id)?;
+
+    // Validate status transition
+    validation::validate_quest_status_transition(&quest.status, &QuestStatus::Paused)?;
+
+    // Update status
+    storage::update_quest_status(env, id, QuestStatus::Paused)?;
+
+    // EMIT EVENT: QuestPaused
+    events::quest_paused(env, id.clone(), caller.clone());
+
+    Ok(())
+}
+
+/// Resume a quest (admin only).
+///
+/// Validates:
+/// - Quest exists
+/// - Status transition (Paused -> Active) is valid
+pub fn resume_quest(env: &Env, id: &Symbol, caller: &Address) -> Result<(), Error> {
+    let quest = storage::get_quest(env, id)?;
+
+    // Validate status transition
+    validation::validate_quest_status_transition(&quest.status, &QuestStatus::Active)?;
+
+    // Update status
+    storage::update_quest_status(env, id, QuestStatus::Active)?;
+
+    // EMIT EVENT: QuestResumed
+    events::quest_resumed(env, id.clone(), caller.clone());
+
+    Ok(())
 pub fn update_quest_metadata(
     env: &Env,
     quest_id: &Symbol,

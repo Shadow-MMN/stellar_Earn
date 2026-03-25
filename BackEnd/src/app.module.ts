@@ -30,6 +30,8 @@ import { HealthModule } from './modules/health/health.module';
 import { throttlerConfig } from './config/throttler.config';
 import { AppThrottlerGuard } from './common/guards/throttler.guard';
 import { EventsModule } from './events/events.module';
+import { SecurityMiddleware } from './common/middleware/security.middleware';
+import { CsrfGuard } from './common/guards/csrf.guard';
 
 @Module({
   imports: [
@@ -77,9 +79,14 @@ import { EventsModule } from './events/events.module';
   controllers: [AppController],
   providers: [
     AppService,
+    SecurityMiddleware,
     {
       provide: APP_GUARD,
       useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
   ],
 })

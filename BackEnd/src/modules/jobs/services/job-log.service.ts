@@ -131,7 +131,7 @@ export class JobLogService {
         attempt,
         maxAttempts,
         isRetryable,
-        completedAt: isRetryable ? null : new Date(),
+        completedAt: isRetryable ? undefined : new Date(),
       },
     );
   }

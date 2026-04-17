@@ -2,7 +2,7 @@ import { Injectable, Logger, BadRequestException, NotFoundException } from '@nes
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Payout, PayoutStatus } from '../../payouts/entities/payout.entity';
+import { Payout, PayoutStatus } from '../../../payouts/entities/payout.entity';
 import { MultiSigTransaction, MultiSigTransactionStatus } from '../entities/multisig-transaction.entity';
 import { MultiSigWallet } from '../entities/multisig-wallet.entity';
 import { CreateMultiSigTransactionDto } from '../dto/multisig.dto';

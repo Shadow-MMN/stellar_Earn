@@ -173,9 +173,8 @@ export const getApplicationSecurityConfig = (
  */
 export const getSecurityConfig = (configService: ConfigService): HelmetOptions => {
   const appSecurity = getApplicationSecurityConfig(configService);
-  const directives: NonNullable<
-    HelmetOptions['contentSecurityPolicy']
-  >['directives'] = {
+  
+  const cspDirectives: Record<string, any> = {
     defaultSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
     scriptSrc: ["'self'"],
@@ -192,12 +191,12 @@ export const getSecurityConfig = (configService: ConfigService): HelmetOptions =
   };
 
   if (appSecurity.environment === 'production') {
-    directives.upgradeInsecureRequests = [];
+    cspDirectives.upgradeInsecureRequests = [];
   }
 
   return {
     contentSecurityPolicy: {
-      directives,
+      directives: cspDirectives,
     },
     crossOriginEmbedderPolicy: false,
     crossOriginOpenerPolicy: { policy: 'same-origin' },

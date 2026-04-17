@@ -1,6 +1,8 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsEnum, IsOptional, IsObject, IsString, IsDateString, IsArray, IsUUID } from 'class-validator';
-import { ReportType, ReportFormat } from '../entities/analytics-report.entity';
+import { Type } from 'class-transformer';
+import { ReportType, ReportFormat, ReportStatus } from '../entities/analytics-report.entity';
+import { SnapshotType } from '../entities/analytics-snapshot.entity';
 
 export class ReportGenerationDto {
   @ApiProperty({
@@ -58,11 +60,12 @@ export class ReportQueryDto {
 
   @ApiProperty({
     description: 'Filter by report status',
+    enum: ReportStatus,
     required: false,
   })
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(ReportStatus)
+  status?: ReportStatus;
 
   @ApiProperty({
     description: 'Filter by user who generated the report',

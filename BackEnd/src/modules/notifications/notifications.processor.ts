@@ -42,7 +42,7 @@ export class NotificationsProcessor extends WorkerHost {
         where: { id: notificationId } 
       });
       const user = await this.userRepository.findOne({ 
-        where: { id: notification.userId } 
+        where: { id: notification?.userId } 
       });
       const log = await this.logRepository.findOne({ 
         where: { id: logId } 
@@ -56,13 +56,13 @@ export class NotificationsProcessor extends WorkerHost {
       let result;
       switch (channel) {
         case ChannelType.IN_APP:
-          result = await this.inAppChannel.send(notification, user);
+          result = await this.inAppChannel.send(notification);
           break;
         case ChannelType.EMAIL:
-          result = await this.emailChannel.send(notification, user);
+          result = await this.emailChannel.send(notification);
           break;
         case ChannelType.PUSH:
-          result = await this.pushChannel.send(notification, user);
+          result = await this.pushChannel.send(notification);
           break;
         case ChannelType.WEBHOOK:
           result = await this.webhookChannel.send(notification, user);

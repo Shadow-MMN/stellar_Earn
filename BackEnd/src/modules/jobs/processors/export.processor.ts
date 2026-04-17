@@ -3,7 +3,7 @@ import { Job } from 'bullmq';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DataExportPayload, ReportGeneratePayload, JobResult } from '../job.types';
-import { JobLogService } from './job-log.service';
+import { JobLogService } from '../services/job-log.service';
 import { DataExport, DataExportStatus } from '../../users/entities/data-export.entity';
 
 /**

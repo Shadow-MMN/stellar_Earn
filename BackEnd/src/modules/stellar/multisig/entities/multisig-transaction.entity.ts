@@ -78,6 +78,9 @@ export class MultiSigTransaction {
   @Column({ nullable: true })
   initiatedBy: string;
 
+  @Column({ nullable: true })
+  lastModifiedBy: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

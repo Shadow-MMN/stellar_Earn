@@ -11,9 +11,9 @@ export class EmailChannel implements NotificationChannel {
   private readonly logger = new Logger(EmailChannel.name);
   readonly type = ChannelType.EMAIL;
 
-  async send(notification: Notification, recipient: any): Promise<DeliveryResult> {
+  async send(notification: Notification): Promise<DeliveryResult> {
     try {
-      this.logger.log(`Sending email notification to ${recipient.email}`);
+      this.logger.log(`Sending email notification to user ${notification.userId}`);
       
       // Placeholder for SendGrid/Mailgun integration
       // if (!process.env.SENDGRID_API_KEY) {

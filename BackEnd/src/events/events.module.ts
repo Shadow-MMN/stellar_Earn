@@ -1,6 +1,6 @@
 import { Module, Global } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
-import { EventsService } from './events.service';
+import { EventsService, EventStoreService } from './events.service';
 import { AuditLogService } from './services/audit-log.service';
 import { RetryService } from './services/retry.service';
 
@@ -17,7 +17,7 @@ import { RetryService } from './services/retry.service';
       ignoreErrors: false,
     }),
   ],
-  providers: [EventsService, AuditLogService, RetryService],
+  providers: [EventsService, EventStoreService, AuditLogService, RetryService],
   exports: [EventsService],
 })
 export class EventsModule {}

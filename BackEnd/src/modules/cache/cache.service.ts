@@ -134,8 +134,8 @@ export class CacheService {
     const lockValue = uuidv4();
 
     try {
-      const store = this.cacheManager.store as any;
-      const client = store.getClient ? store.getClient() : null;
+      const store = (this.cacheManager as any).stores?.[0] ?? (this.cacheManager as any).store;
+      const client = store?.getClient ? store.getClient() : store?.client ? store.client : null;
       if (client && typeof client.set === 'function') {
         const result = await client.set(lockKey, lockValue, 'PX', ttlMs, 'NX');
         if (result === 'OK') return lockValue;
@@ -164,8 +164,8 @@ export class CacheService {
     const lockKey = `lock:${key}`;
     
     try {
-      const store = this.cacheManager.store as any;
-      const client = store.getClient ? store.getClient() : null;
+      const store = (this.cacheManager as any).stores?.[0] ?? (this.cacheManager as any).store;
+      const client = store?.getClient ? store.getClient() : store?.client ? store.client : null;
       if (client && typeof client.eval === 'function') {
         // Lua script to check value and del
         const script = `

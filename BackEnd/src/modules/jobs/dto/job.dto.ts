@@ -1,4 +1,5 @@
-import { IsEnum, IsOptional, IsString, IsNumber, IsObject, IsArray, ValidateNested, Type } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsNumber, IsObject, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import { JobType, JobPriority, JobStatus } from '../job.types';
 
 /**

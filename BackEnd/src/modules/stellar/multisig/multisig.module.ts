@@ -6,7 +6,7 @@ import { MultiSigTransaction } from './entities/multisig-transaction.entity';
 import { MultiSigSignature } from './entities/multisig-signature.entity';
 import { MultiSigWalletService } from './services/multisig-wallet.service';
 import { MultiSigPayoutService } from './services/multisig-payout.service';
-import { Payout } from '../payouts/entities/payout.entity';
+import { Payout } from '../../payouts/entities/payout.entity';
 
 @Module({
   imports: [

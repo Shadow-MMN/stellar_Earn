@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { QuestDeadlineCheckPayload, QuestCompletionVerifyPayload, JobResult } from '../job.types';
-import { JobLogService } from './job-log.service';
+import { JobLogService } from '../services/job-log.service';
 
 /**
  * Quest Processor

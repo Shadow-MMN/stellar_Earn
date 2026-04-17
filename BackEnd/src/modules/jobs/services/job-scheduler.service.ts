@@ -2,9 +2,9 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CronJob } from 'cron';
-import { JobType, JobPriority } from './job.types';
-import { JobSchedule } from './entities/job-log.entity';
-import { JobsService } from './jobs.service';
+import { JobType, JobPriority } from '../job.types';
+import { JobSchedule } from '../entities/job-log.entity';
+import { JobsService } from '../jobs.service';
 
 /**
  * Job Scheduler Service
@@ -104,6 +104,8 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
       throw new Error(`Invalid cron expression: ${cronExpression}`);
     }
 
+    const nextRunTime = this.getNextRunTime(cronExpression, options?.timezone);
+
     const schedule = this.jobScheduleRepository.create({
       jobType,
       cronExpression,
@@ -112,7 +114,7 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
       organizationId: options?.organizationId,
       description: options?.description,
       isActive: true,
-      nextRunAt: this.getNextRunTime(cronExpression, options?.timezone),
+      nextRunAt: nextRunTime ?? undefined,
     });
 
     const saved = await this.jobScheduleRepository.save(schedule);
@@ -143,7 +145,10 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
     }
 
     Object.assign(schedule, updates);
-    schedule.nextRunAt = this.getNextRunTime(schedule.cronExpression, schedule.timezone);
+    const nextRunTime = this.getNextRunTime(schedule.cronExpression, schedule.timezone);
+    if (nextRunTime) {
+      schedule.nextRunAt = nextRunTime;
+    }
 
     const updated = await this.jobScheduleRepository.save(schedule);
 
@@ -188,8 +193,11 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
     }
 
     schedule.isActive = true;
-    schedule.disabledAt = null;
-    schedule.nextRunAt = this.getNextRunTime(schedule.cronExpression, schedule.timezone);
+    (schedule as any).disabledAt = null;
+    const nextRunTime = this.getNextRunTime(schedule.cronExpression, schedule.timezone);
+    if (nextRunTime) {
+      schedule.nextRunAt = nextRunTime;
+    }
     await this.jobScheduleRepository.save(schedule);
 
     await this.startSchedule(schedule);
@@ -258,7 +266,7 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
     this.logger.log(
       `Manually triggered schedule ${scheduleId}, created job ${job.id}`,
     );
-    return job.id;
+    return job.id ?? '';
   }
 
   /**
@@ -314,7 +322,6 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
             );
 
             schedule.successCount++;
-            schedule.lastErrorMessage = null;
 
             this.logger.debug(
               `Scheduled job ${schedule.id} executed, created job ${job.id}`,
@@ -328,10 +335,13 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
             );
           }
 
-          schedule.nextRunAt = this.getNextRunTime(
+          const nextRun = this.getNextRunTime(
             schedule.cronExpression,
             schedule.timezone,
           );
+          if (nextRun) {
+            schedule.nextRunAt = nextRun;
+          }
           await this.jobScheduleRepository.save(schedule);
         },
         null, // onComplete callback
@@ -377,22 +387,22 @@ export class JobSchedulerService implements OnModuleInit, OnModuleDestroy {
   /**
    * Validate cron expression
    */
-  private isValidCronExpression(expression: string): boolean {
+private isValidCronExpression(expression: string): boolean {
     try {
-      new CronJob(expression);
+      new CronJob(expression, () => {});
       return true;
     } catch {
       return false;
     }
-  }
+}
 
   /**
    * Get next run time for a cron expression
    */
-  private getNextRunTime(cronExpression: string, timezone?: string): Date {
+  private getNextRunTime(cronExpression: string, timezone?: string): Date | null {
     try {
       const job = new CronJob(cronExpression, () => {}, null, false, timezone || 'UTC');
-      return job.nextDate().toDate();
+      return job.nextDate().toJSDate();
     } catch {
       return null;
     }

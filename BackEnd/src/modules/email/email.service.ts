@@ -12,7 +12,7 @@ import { EmailTemplateEngine } from './templates/template.engine';
 import { JobsService } from '../jobs/jobs.service';
 import { QUEUES } from '../jobs/jobs.constants';
 
-interface DeliveryRecord {
+export interface DeliveryRecord {
   messageId: string;
   to: string;
   subject: string;

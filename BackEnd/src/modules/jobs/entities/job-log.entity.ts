@@ -9,7 +9,7 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { JobStatus, JobType } from './job.types';
+import { JobStatus, JobType } from '../job.types';
 
 /**
  * Job Log Entity
@@ -262,7 +262,7 @@ export class JobSchedule {
   @Column({ type: 'timestamp', nullable: true })
   nextRunAt: Date;
 
-  @Column({ type: 'varchar', max: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   lastErrorMessage: string;
 
   @CreateDateColumn()

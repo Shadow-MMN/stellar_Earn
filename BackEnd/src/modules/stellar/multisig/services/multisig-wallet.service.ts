@@ -158,6 +158,9 @@ export class MultiSigWalletService {
     const wallet = await this.walletRepository.findOne({
       where: { id: multiSigWalletId },
     });
+    if (!wallet) {
+      throw new NotFoundException('Multi-sig wallet not found');
+    }
     wallet.lastModifiedBy = userId;
     wallet.lastActivityAt = new Date();
     await this.walletRepository.save(wallet);
@@ -318,7 +321,7 @@ export class MultiSigWalletService {
 
     signature.status = SignatureStatus.SIGNED;
     signature.signedAt = new Date();
-    signature.comment = approveDto.comment;
+    signature.comment = approveDto.comment ?? '';
     await this.signatureRepository.save(signature);
 
     transaction.approvalsReceived += 1;

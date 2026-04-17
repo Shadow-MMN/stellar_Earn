@@ -12,6 +12,7 @@ export enum PayoutStatus {
   COMPLETED = 'completed',
   FAILED = 'failed',
   RETRY_SCHEDULED = 'retry_scheduled',
+  AWAITING_APPROVAL = 'awaiting_approval',
 }
 
 export enum PayoutType {

@@ -1,7 +1,6 @@
 import { Controller, Get, Header, Res } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { ApiVersion } from '../../common/decorators/api-version.decorator';
 import { Response } from 'express';
 import { DatabaseIndicator } from './indicators/database.indicator';
 import { RedisIndicator } from './indicators/redis.indicator';
@@ -10,9 +9,6 @@ import { SkipLogging } from '../../common/interceptors/logging.interceptor';
 
 @ApiTags('Health')
 @Controller('health')
-@ApiVersion(['1', '2'], {
-  deprecated: false,
-})
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,
@@ -43,10 +39,6 @@ export class HealthController {
     ]);
   }
 
-  /**
-   * Liveness probe — always returns 200 as long as the process is running.
-   * Does NOT check downstream dependencies, so it never blocks a restart loop.
-   */
   @Get('live')
   @SkipLogging()
   @ApiOperation({ summary: 'Liveness probe — 200 while the process is alive' })
@@ -59,10 +51,6 @@ export class HealthController {
     };
   }
 
-  /**
-   * Detailed system snapshot: memory, uptime, and all collected in-process
-   * metrics in a structured JSON format suitable for a monitoring dashboard.
-   */
   @Get('detailed')
   @ApiOperation({ summary: 'Detailed system metrics snapshot (JSON)' })
   @ApiResponse({ status: 200, description: 'Full metrics snapshot' })
@@ -70,17 +58,6 @@ export class HealthController {
     return this.metrics.getSnapshot();
   }
 
-  /**
-   * Prometheus text-format metrics endpoint.
-   * Compatible with Prometheus scrape configs and Grafana data sources.
-   *
-   * Scrape config example:
-   *   scrape_configs:
-   *     - job_name: stellar_earn
-   *       static_configs:
-   *         - targets: ['host:3001']
-   *       metrics_path: /api/v1/health/metrics
-   */
   @Get('metrics')
   @SkipLogging()
   @Header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')

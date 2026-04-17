@@ -7,6 +7,7 @@ import { Payout } from '../entities/payout.entity';
 import { User as AnalyticsUser } from '../entities/user.entity';
 import { BaseAnalyticsAggregator, AggregationOptions, AggregationResult } from './base-aggregator';
 import { SnapshotType } from '../entities/analytics-snapshot.entity';
+import { AnalyticsSnapshot } from '../entities/analytics-snapshot.entity';
 
 export interface PlatformMetrics {
   totalUsers: number;
@@ -25,21 +26,29 @@ export interface PlatformMetrics {
   completionRate: number;
   averageApprovalTime: number;
   averageCompletionTime: number;
+  [key: string]: number | string; // index signature for compatibility
 }
 
-/**
- * Platform Analytics Aggregator
- * Aggregates platform-wide metrics for overall business intelligence
- */
 @Injectable()
 export class PlatformAnalyticsAggregator extends BaseAnalyticsAggregator {
-  constructor() {
+  constructor(
+    @InjectRepository(AnalyticsSnapshot)
+    snapshotRepository: Repository<AnalyticsSnapshot>,
+    @InjectRepository(Quest)
+    questRepository: Repository<Quest>,
+    @InjectRepository(Submission)
+    submissionRepository: Repository<Submission>,
+    @InjectRepository(Payout)
+    payoutRepository: Repository<Payout>,
+    @InjectRepository(AnalyticsUser)
+    userRepository: Repository<AnalyticsUser>,
+  ) {
     super(
-      undefined, // snapshotRepository will be injected via parent
-      undefined, // questRepository
-      undefined, // submissionRepository
-      undefined, // payoutRepository
-      undefined, // userRepository
+      snapshotRepository,
+      questRepository,
+      submissionRepository,
+      payoutRepository,
+      userRepository,
     );
   }
 

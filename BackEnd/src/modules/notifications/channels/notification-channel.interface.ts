@@ -18,5 +18,5 @@ export interface DeliveryResult {
 
 export interface NotificationChannel {
   type: ChannelType;
-  send(notification: Notification, recipient: any): Promise<DeliveryResult>;
+  send(notification: Notification, recipient?: any): Promise<DeliveryResult>;
 }

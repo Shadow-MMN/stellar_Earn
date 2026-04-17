@@ -11,7 +11,7 @@ export class PushChannel implements NotificationChannel {
   private readonly logger = new Logger(PushChannel.name);
   readonly type = ChannelType.PUSH;
 
-  async send(notification: Notification, recipient: any): Promise<DeliveryResult> {
+  async send(notification: Notification): Promise<DeliveryResult> {
     try {
       this.logger.log(`Sending push notification to user ${notification.userId}`);
       

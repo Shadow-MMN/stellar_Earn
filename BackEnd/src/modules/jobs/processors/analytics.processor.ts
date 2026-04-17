@@ -46,9 +46,17 @@ export class AnalyticsProcessor {
       await job.updateProgress(20);
 
       // Determine date range
-      const { startDate, endDate } = dateRange ?
-        { startDate: new Date(dateRange.start), endDate: new Date(dateRange.end) } :
-        this.getDefaultDateRange(aggregationType);
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (dateRange) {
+        startDate = new Date(dateRange.startDate || (dateRange as any).start);
+        endDate = new Date(dateRange.endDate || (dateRange as any).end);
+      } else {
+        const defaultRange = this.getDefaultDateRange(aggregationType);
+        startDate = defaultRange.start;
+        endDate = defaultRange.end;
+      }
 
       const aggregationOptions = {
         startDate,
@@ -64,7 +72,7 @@ export class AnalyticsProcessor {
 
       // Determine which types to aggregate
       const typesToAggregate = metricsType && metricsType.length > 0 ?
-        metricsType.map(type => this.mapMetricTypeToSnapshotType(type)).filter(Boolean) :
+        metricsType.map(type => this.mapMetricTypeToSnapshotType(type)).filter((t): t is SnapshotType => t !== null && t !== undefined) :
         [SnapshotType.PLATFORM, SnapshotType.QUEST, SnapshotType.USER];
 
       // Run batch aggregation
@@ -139,7 +147,17 @@ export class AnalyticsProcessor {
       this.logger.log(`Processing report generation job ${job.id}: type=${reportType}`);
 
       // Get user (simplified - in real implementation, fetch from database)
-      const generatedBy = { id: generatedById, email: 'system@stellarearn.com' };
+      const generatedBy = { 
+        id: generatedById, 
+        email: 'system@stellarearn.com',
+        stellarAddress: null,
+        username: 'System',
+        totalXp: 0,
+        level: 1,
+        questsCompleted: 0,
+        badges: [],
+        createdAt: new Date(),
+      } as any;
 
       const reportOptions: ReportGenerationOptions = {
         type: reportType,

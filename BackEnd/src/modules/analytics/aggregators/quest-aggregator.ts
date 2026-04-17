@@ -18,32 +18,26 @@ export interface QuestMetrics {
   averageCompletionTime: number;
   totalRewardPool: string;
   averageRewardPerQuest: string;
+  [key: string]: string | number;
 }
 
-/**
- * Quest Analytics Aggregator
- * Aggregates quest-related metrics including completion rates, submission stats, and performance
- */
 @Injectable()
 export class QuestAnalyticsAggregator extends BaseAnalyticsAggregator {
   constructor(
     @InjectRepository(Quest)
-    private questRepository: Repository<Quest>,
+    protected questRepository: Repository<Quest>,
     @InjectRepository(Submission)
-    private submissionRepository: Repository<Submission>,
+    protected submissionRepository: Repository<Submission>,
   ) {
     super(
-      undefined, // snapshotRepository will be injected via parent
-      undefined, // questRepository
-      undefined, // submissionRepository
-      undefined, // payoutRepository
-      undefined, // userRepository
+      undefined as any,
+      undefined as any,
+      undefined as any,
+      undefined as any,
+      undefined as any,
     );
   }
 
-  /**
-   * Aggregate quest metrics for a specific time period
-   */
   async aggregateQuestMetrics(options: AggregationOptions): Promise<AggregationResult[]> {
     const dateRanges = this.generateDateRanges(
       options.startDate,

@@ -101,12 +101,12 @@ export class JobsController {
   @ApiOperation({ summary: 'Create multiple jobs in bulk' })
   @ApiResponse({ status: 201, type: BatchJobResponseDto })
   async createJobsBulk(@Body() bulkDto: BulkCreateJobsDto): Promise<BatchJobResponseDto> {
-    const results = {
+    const results: BatchJobResponseDto = {
       successCount: 0,
       failureCount: 0,
       totalCount: bulkDto.jobs.length,
-      createdJobs: [],
-      failedJobs: [],
+      createdJobs: [] as JobResponseDto[],
+      failedJobs: [] as Array<{ index: number; error: string }>,
     };
 
     for (let i = 0; i < bulkDto.jobs.length; i++) {

@@ -19,34 +19,28 @@ export interface UserMetrics {
   approvalRate: number;
   retentionRate: number;
   averageXpEarned: number;
+  [key: string]: number | string;
 }
 
-/**
- * User Analytics Aggregator
- * Aggregates user-related metrics including activity, retention, and engagement
- */
 @Injectable()
 export class UserAnalyticsAggregator extends BaseAnalyticsAggregator {
   constructor(
     @InjectRepository(AnalyticsUser)
-    private userRepository: Repository<AnalyticsUser>,
+    protected userRepository: Repository<AnalyticsUser>,
     @InjectRepository(Submission)
-    private submissionRepository: Repository<Submission>,
+    protected submissionRepository: Repository<Submission>,
     @InjectRepository(Payout)
-    private payoutRepository: Repository<Payout>,
+    protected payoutRepository: Repository<Payout>,
   ) {
     super(
-      undefined, // snapshotRepository will be injected via parent
-      undefined, // questRepository
-      undefined, // submissionRepository
-      undefined, // payoutRepository
-      undefined, // userRepository
+      undefined as any,
+      undefined as any,
+      undefined as any,
+      undefined as any,
+      undefined as any,
     );
   }
 
-  /**
-   * Aggregate user metrics for a specific time period
-   */
   async aggregateUserMetrics(options: AggregationOptions): Promise<AggregationResult[]> {
     const dateRanges = this.generateDateRanges(
       options.startDate,
@@ -225,7 +219,7 @@ export class UserAnalyticsAggregator extends BaseAnalyticsAggregator {
       averageSubmissionsPerUser: totalSubmissions,
       approvalRate,
       retentionRate: 100, // Individual user retention is always 100% if active
-      averageXpEarned: user.xp || 0,
+      averageXpEarned: user.totalXp || 0,
     };
   }
 
@@ -307,12 +301,12 @@ export class UserAnalyticsAggregator extends BaseAnalyticsAggregator {
   private async calculateAverageXpEarned(options: AggregationOptions): Promise<number> {
     const users = await this.userRepository.find({
       where: this.getCommonConditions(options),
-      select: ['xp'],
+      select: ['totalXp'],
     });
 
     if (users.length === 0) return 0;
 
-    const totalXp = users.reduce((sum, user) => sum + (user.xp || 0), 0);
+    const totalXp = users.reduce((sum, user) => sum + (user.totalXp || 0), 0);
     return totalXp / users.length;
   }
 }

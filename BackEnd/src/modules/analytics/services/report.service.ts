@@ -7,7 +7,7 @@ import { PlatformAnalyticsService } from '../services/platform-analytics.service
 import { QuestAnalyticsService } from '../services/quest-analytics.service';
 import { UserAnalyticsService } from '../services/user-analytics.service';
 import { BaseAnalyticsExporter, ExportOptions, ExportResult } from '../exporters/base-exporter';
-import { AnalyticsQueryDto } from '../dto/analytics-query.dto';
+import { AnalyticsQueryDto, Granularity } from '../dto/analytics-query.dto';
 
 export interface ReportGenerationOptions {
   type: ReportType;
@@ -182,7 +182,7 @@ export class AnalyticsReportService {
       const query: AnalyticsQueryDto = {
         startDate: report.startDate.toISOString().split('T')[0],
         endDate: report.endDate.toISOString().split('T')[0],
-        granularity: 'daily',
+        granularity: Granularity.DAY,
       };
 
       switch (report.type) {

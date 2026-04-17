@@ -299,6 +299,46 @@ export class UsersService {
     return user;
   }
 
+  async getLeaderboard(page: number = 1, limit: number = 50) {
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await this.usersRepository.findAndCount({
+      order: { xp: 'DESC' },
+      skip,
+      take: limit,
+      select: [
+        'id',
+        'username',
+        'avatarUrl',
+        'stellarAddress',
+        'xp',
+        'level',
+        'createdQuests',
+        'totalEarned',
+      ],
+    });
+
+    const leaderboard = users.map((user, index) => ({
+      rank: (page - 1) * limit + index + 1,
+      id: user.id,
+      username: user.username,
+      avatarUrl: user.avatarUrl,
+      stellarAddress: user.stellarAddress,
+      xp: user.xp,
+      level: user.level,
+      createdQuests: user.createdQuests,
+      totalEarned: user.totalEarned,
+    }));
+
+    return {
+      data: leaderboard,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
   async searchUsers(searchDto: SearchUsersDto) {
     const {
       query,
@@ -320,48 +360,13 @@ export class UsersService {
       order: { [sortBy]: order },
       skip,
       take: limit,
-      select: [
+select: [
         'id',
-        'username',
         'avatarUrl',
         'stellarAddress',
         'xp',
         'level',
-        'createdAt',
-      ],
-    });
-
-    return {
-      data: users,
-      meta: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
-    };
-  }
-
-  async getLeaderboard(page = 1, limit = 50) {
-    const cacheKey = `leaderboard_page_${page}_limit_${limit}`;
-    const cached = await this.cacheManager.get<LeaderboardEntry[]>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
-    const [users] = await this.usersRepository.findAndCount({
-      order: { xp: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-      select: [
-        'id',
-        'username',
-        'avatarUrl',
-        'stellarAddress',
-        'xp',
-        'level',
-        'completedQuests',
+        'createdQuests',
         'totalEarned',
       ],
     });
@@ -376,11 +381,11 @@ export class UsersService {
       },
       xp: user.xp,
       level: user.level,
-      completedQuests: user.completedQuests,
-      totalEarned: user.totalEarned,
+      createdQuests: user.createdQuests,
+totalEarned: user.totalEarned,
     }));
 
-    await this.cacheManager.set(cacheKey, leaderboard, 30000); // Cache for 30 seconds
+    await this.cacheManager.set('leaderboard_data', leaderboard, 30000);
     return leaderboard;
   }
 
@@ -423,7 +428,7 @@ export class UsersService {
     let xpAdded = 0;
 
     if (success) {
-      user.completedQuests += 1;
+      user.questsCompleted += 1;
       // Add XP for completion
       xpAdded = 100;
       user.xp += xpAdded;

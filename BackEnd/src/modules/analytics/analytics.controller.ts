@@ -32,12 +32,12 @@ import { AnalyticsAggregationService, BatchAggregationOptions } from './services
 import { PlatformStatsDto } from './dto/platform-stats.dto';
 import { QuestAnalyticsDto } from './dto/quest-analytics.dto';
 import { UserAnalyticsDto } from './dto/user-analytics.dto';
-import {
-  AnalyticsQueryDto,
-  QuestAnalyticsQueryDto,
-  UserAnalyticsQueryDto,
-} from './dto/analytics-query.dto';
+import { AnalyticsQueryDto, QuestAnalyticsQueryDto, UserAnalyticsQueryDto, Granularity } from './dto/analytics-query.dto';
 import { ReportGenerationDto, ReportQueryDto, AggregationOptionsDto, BatchAggregationDto } from './dto/report.dto';
+import { ReportType, ReportFormat } from './entities/analytics-report.entity';
+import { SnapshotType } from './entities/analytics-snapshot.entity';
+import { Role } from '../../common/enums/role.enum';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
 @ApiTags('Analytics')
 @Controller('analytics')
@@ -175,10 +175,12 @@ export class AnalyticsController {
   })
   async generateReport(
     @Body() options: ReportGenerationDto,
-    @GetUser() user: any,
+    @CurrentUser() user: any,
   ): Promise<any> {
     const reportOptions: ReportGenerationOptions = {
       ...options,
+      parameters: options.parameters || {},
+      filters: options.filters || {},
       startDate: new Date(options.startDate),
       endDate: new Date(options.endDate),
       generatedBy: user,
@@ -203,7 +205,12 @@ export class AnalyticsController {
     description: 'Reports retrieved successfully',
   })
   async queryReports(@Query() options: ReportQueryDto): Promise<any> {
-    return this.reportService.queryReports(options);
+    const queryOptions = {
+      ...options,
+      startDate: options.startDate ? new Date(options.startDate) : undefined,
+      endDate: options.endDate ? new Date(options.endDate) : undefined,
+    };
+    return this.reportService.queryReports(queryOptions);
   }
 
   @Get('reports/:id')
@@ -290,7 +297,14 @@ export class AnalyticsController {
     description: 'Batch aggregation completed successfully',
   })
   async runBatchAggregation(@Body() options: BatchAggregationDto): Promise<any> {
-    const result = await this.aggregationService.runBatchAggregation(options);
+    const transformedOptions = {
+      ...options,
+      granularity: options.granularity || 'daily',
+      types: options.types?.map(t => t as SnapshotType),
+      startDate: new Date(options.startDate),
+      endDate: new Date(options.endDate),
+    };
+    const result = await this.aggregationService.runBatchAggregation(transformedOptions);
     return {
       ...result,
       message: `Processed ${result.processed} snapshots, skipped ${result.skipped}, ${result.errors} errors`,
@@ -326,6 +340,7 @@ export class AnalyticsController {
   ): Promise<any> {
     const processed = await this.aggregationService.aggregateQuestData(questId, {
       ...options,
+      granularity: options.granularity || 'daily',
       startDate: new Date(options.startDate),
       endDate: new Date(options.endDate),
     });
@@ -366,6 +381,7 @@ export class AnalyticsController {
   ): Promise<any> {
     const processed = await this.aggregationService.aggregateUserData(userId, {
       ...options,
+      granularity: options.granularity || 'daily',
       startDate: new Date(options.startDate),
       endDate: new Date(options.endDate),
     });
@@ -413,7 +429,7 @@ export class AnalyticsController {
     const query: AnalyticsQueryDto = {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
-      granularity: 'hourly',
+      granularity: 'hourly' as Granularity,
     };
 
     return this.platformAnalyticsService.getPlatformStats(query);
@@ -459,7 +475,7 @@ export class AnalyticsController {
     const query: AnalyticsQueryDto = {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
-      granularity: 'daily',
+      granularity: 'daily' as Granularity,
     };
 
     const [platformStats, aggregationStats] = await Promise.all([

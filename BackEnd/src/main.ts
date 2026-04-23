@@ -16,6 +16,8 @@ import { CustomValidationPipe } from './common/pipes/validation.pipe';
 import { SanitizationPipe } from './common/pipes/sanitization.pipe';
 import { ValidationExceptionFilter } from './common/filters/validation-exception.filter';
 import { SecurityExceptionFilter } from './common/filters/security-exception.filter';
+import { AppExceptionFilter } from './common/filters/app-exception.filter';
+import { SentryExceptionFilter } from './common/filters/sentry-exception.filter';
 import { SecurityMiddleware } from './common/middleware/security.middleware';
 import {
   getApplicationSecurityConfig,
@@ -24,6 +26,10 @@ import {
 import { getCorsConfig } from './config/cors.config';
 import { createLoggerConfig } from './config/logger.config';
 import { AppLoggerService } from './common/logger/logger.service';
+import { initSentry } from './config/sentry.config';
+
+// Initialise Sentry before anything else so it can capture bootstrap errors
+initSentry();
 
 const bootstrapLogger = WinstonModule.createLogger(createLoggerConfig());
 
@@ -102,8 +108,10 @@ async function bootstrap() {
     );
 
     app.useGlobalFilters(
+      new SentryExceptionFilter(),
       new SecurityExceptionFilter(),
       new ValidationExceptionFilter(),
+      new AppExceptionFilter(),
     );
 
     logger.log('Security middleware and pipes configured', 'Bootstrap');

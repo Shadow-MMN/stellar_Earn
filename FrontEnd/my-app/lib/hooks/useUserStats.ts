@@ -1,7 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import type { DashboardData, UserStats, Quest, Submission, EarningsData, Badge } from '../types/dashboard';
+import { useState, useEffect, useCallback } from "react";
+import type {
+  DashboardData,
+  UserStats,
+  Quest,
+  Submission,
+  EarningsData,
+  Badge,
+} from "../types/dashboard";
 import {
   fetchUserStats,
   fetchActiveQuests,
@@ -9,8 +16,8 @@ import {
   fetchEarningsHistory,
   fetchBadges,
   fetchDashboardData,
-} from '../api/user';
-import { useAuth } from '@/context/AuthContext';
+} from "../api/user";
+import { useAuth } from "@/context/AuthContext";
 
 interface UseUserStatsReturn {
   stats: UserStats | null;
@@ -24,6 +31,7 @@ interface UseUserStatsReturn {
 }
 
 export function useUserStats(): UseUserStatsReturn {
+  const { user } = useAuth();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [activeQuests, setActiveQuests] = useState<Quest[]>([]);
   const [recentSubmissions, setRecentSubmissions] = useState<Submission[]>([]);
@@ -33,22 +41,31 @@ export function useUserStats(): UseUserStatsReturn {
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
+    if (!user?.stellarAddress) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      const data = await fetchDashboardData() as DashboardData;
+      const data = (await fetchDashboardData(
+        user.stellarAddress,
+      )) as DashboardData;
       setStats(data.stats);
       setActiveQuests(data.activeQuests);
       setRecentSubmissions(data.recentSubmissions);
       setEarningsHistory(data.earningsHistory);
       setBadges(data.badges);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch dashboard data');
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch dashboard data",
+      );
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.stellarAddress]);
 
   useEffect(() => {
     fetchData();
@@ -79,8 +96,8 @@ export function useStats() {
       return;
     }
     fetchUserStats(user.stellarAddress)
-      .then(data => setStats(data as any))
-      .catch(err => setError(err.message))
+      .then((data) => setStats(data as any))
+      .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   }, [user?.stellarAddress]);
 
@@ -95,7 +112,7 @@ export function useActiveQuests() {
   useEffect(() => {
     fetchActiveQuests()
       .then(setQuests)
-      .catch(err => setError(err.message))
+      .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -113,7 +130,9 @@ export function useRecentSubmissions() {
       const data = await fetchRecentSubmissions();
       setSubmissions(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch submissions');
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch submissions",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -134,7 +153,7 @@ export function useEarningsHistory() {
   useEffect(() => {
     fetchEarningsHistory()
       .then(setEarnings)
-      .catch(err => setError(err.message))
+      .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -149,7 +168,7 @@ export function useBadges() {
   useEffect(() => {
     fetchBadges()
       .then(setBadges)
-      .catch(err => setError(err.message))
+      .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   }, []);
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Badge } from '@/lib/types/dashboard';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface BadgeDisplayProps {
   badges: Badge[];
@@ -12,11 +13,6 @@ interface BadgeItemProps {
   badge: Badge;
 }
 
-function BadgeSkeleton() {
-  return (
-    <div className="flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-700" />
-  );
-}
 
 function formatDate(dateString: string): string {
   if (!dateString) return 'N/A';
@@ -148,7 +144,7 @@ export function BadgeDisplay({ badges, isLoading }: BadgeDisplayProps) {
       {isLoading ? (
         <div className="flex flex-wrap gap-3 justify-center">
           {[...Array(5)].map((_, i) => (
-            <BadgeSkeleton key={i} />
+            <Skeleton.Text key={i} className="h-16 w-16 rounded-full" />
           ))}
         </div>
       ) : badges.length === 0 ? (

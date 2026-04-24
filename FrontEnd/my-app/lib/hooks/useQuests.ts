@@ -57,7 +57,14 @@ export function useQuests(
     } finally {
       setQuestsLoading(false);
     }
-  }, [memoizedFilters, memoizedPagination]);
+  }, [
+    memoizedFilters,
+    memoizedPagination,
+    setQuestsLoading,
+    setQuestsError,
+    setQuests,
+    setPagination
+  ]);
 
   useEffect(() => {
     fetchQuests();

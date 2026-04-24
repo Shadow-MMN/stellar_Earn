@@ -51,7 +51,16 @@ export function useSubmissions(
     } finally {
       setLoading(false);
     }
-  }, [memoizedFilters, pagination.page, pagination.limit, memoizedInitialPagination]);
+  }, [
+    memoizedFilters,
+    pagination.page,
+    pagination.limit,
+    memoizedInitialPagination,
+    setLoading,
+    setError,
+    setSubmissions,
+    setPagination
+  ]);
 
   useEffect(() => {
     if (memoizedFilters) setFilters(memoizedFilters);

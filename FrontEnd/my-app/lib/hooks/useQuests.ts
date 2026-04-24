@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { getQuests } from '@/lib/api/quests';
 import type { QuestQueryParams, PaginationParams } from '@/lib/types/api.types';
@@ -18,12 +18,31 @@ export function useQuests(
   const setQuestsError   = useStore((s) => s.setQuestsError);
   const setPagination    = useStore((s) => s.setQuestPagination);
 
+  // Memoize filters to avoid unnecessary re-renders when the object reference changes
+  // but the values remain the same.
+  const memoizedFilters = useMemo(() => filters, [
+    filters?.status,
+    filters?.category,
+    filters?.difficulty,
+    filters?.search,
+    filters?.minReward,
+    filters?.maxReward,
+    filters?.sortBy,
+    filters?.order,
+  ]);
+
+  const memoizedPagination = useMemo(() => pagination, [
+    pagination?.page,
+    pagination?.limit,
+    pagination?.cursor,
+  ]);
+
   const fetchQuests = useCallback(async () => {
     try {
       setQuestsLoading(true);
       setQuestsError(null);
 
-      const response = await getQuests({ ...filters, ...pagination });
+      const response = await getQuests({ ...memoizedFilters, ...memoizedPagination });
       setQuests(response.quests as any);
       setPagination({
         page: response.page ?? 1,
@@ -38,7 +57,15 @@ export function useQuests(
     } finally {
       setQuestsLoading(false);
     }
-  }, [JSON.stringify(filters), JSON.stringify(pagination)]);
+  }, [
+    memoizedFilters,
+    memoizedPagination,
+    setQuestsLoading,
+    setQuestsError,
+    setQuests,
+    setPagination,
+    getQuests
+  ]);
 
   useEffect(() => {
     fetchQuests();

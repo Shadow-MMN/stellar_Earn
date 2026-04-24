@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useStore } from '@/lib/store';
 import { fetchSubmissions } from '@/lib/api/submissions';
 import type { SubmissionFilters, PaginationParams } from '@/lib/types/submission';
@@ -21,15 +21,22 @@ export function useSubmissions(
   const setFilters         = useStore((s) => s.setSubmissionFilters);
   const optimisticUpdate   = useStore((s) => s.optimisticallyUpdateSubmission);
 
+  const memoizedFilters = useMemo(() => filters, [filters?.status]);
+  const memoizedInitialPagination = useMemo(() => initialPagination, [
+    initialPagination?.page,
+    initialPagination?.limit,
+    initialPagination?.cursor,
+  ]);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetchSubmissions(filters as any, {
+      const response = await fetchSubmissions(memoizedFilters as any, {
         page:   pagination.page,
         limit:  pagination.limit,
-        ...initialPagination,
+        ...memoizedInitialPagination,
       });
 
       setSubmissions(response.data as any);
@@ -44,11 +51,21 @@ export function useSubmissions(
     } finally {
       setLoading(false);
     }
-  }, [filters?.status, pagination.page, pagination.limit]);
+  }, [
+    memoizedFilters,
+    pagination.page,
+    pagination.limit,
+    memoizedInitialPagination,
+    setLoading,
+    setError,
+    setSubmissions,
+    setPagination,
+    fetchSubmissions
+  ]);
 
   useEffect(() => {
-    if (filters) setFilters(filters);
-  }, [filters?.status]);
+    if (memoizedFilters) setFilters(memoizedFilters);
+  }, [memoizedFilters, setFilters]);
 
   useEffect(() => {
     load();
@@ -56,11 +73,11 @@ export function useSubmissions(
 
   const goToPage = useCallback((page: number) => {
     setPagination({ page });
-  }, []);
+  }, [setPagination]);
 
   const loadMore = useCallback(() => {
     if (pagination.hasMore) setPagination({ page: pagination.page + 1 });
-  }, [pagination.hasMore, pagination.page]);
+  }, [pagination.hasMore, pagination.page, setPagination]);
 
   return {
     submissions,

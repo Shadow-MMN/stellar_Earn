@@ -5,6 +5,7 @@ pub mod errors;
 mod escrow;
 mod events;
 mod init;
+mod oracle;
 mod payout;
 mod quest;
 mod reputation;
@@ -15,7 +16,7 @@ pub mod types;
 pub mod validation;
 
 use crate::errors::Error;
-use crate::types::{Badge, BatchApprovalInput, BatchQuestInput, CreatorStats, EscrowInfo, PlatformStats, Quest, QuestMetadata, QuestStatus, UserStats, Submission};
+use crate::types::{Badge, BatchApprovalInput, BatchQuestInput, CreatorStats, EscrowInfo, PlatformStats, Quest, QuestMetadata, QuestStatus, UserStats, Submission, OracleConfig, PriceFeedRequest, AggregatedPrice, PriceData};
 use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Symbol, Vec};
 
 #[contract]
@@ -422,6 +423,142 @@ impl EarnQuestContract {
                 total_rewards_claimed: 0,
             },
         );
+        Ok(())
+    }
+
+    //================================================================================
+    // Oracle Management Functions
+    //================================================================================
+
+    /// Add a new oracle configuration (admin only)
+    pub fn add_oracle(
+        env: Env,
+        caller: Address,
+        oracle_config: OracleConfig,
+    ) -> Result<(), Error> {
+        security::require_not_paused(&env)?;
+        admin::require_admin(&env, &caller)?;
+        
+        oracle::Oracle::validate_config(&oracle_config)?;
+        storage::add_oracle_config(&env, &oracle_config)?;
+        
+        Ok(())
+    }
+
+    /// Remove an oracle configuration (admin only)
+    pub fn remove_oracle(
+        env: Env,
+        caller: Address,
+        oracle_address: Address,
+    ) -> Result<(), Error> {
+        security::require_not_paused(&env)?;
+        admin::require_admin(&env, &caller)?;
+        
+        storage::remove_oracle_config(&env, &oracle_address)?;
+        
+        Ok(())
+    }
+
+    /// Update oracle configuration (admin only)
+    pub fn update_oracle(
+        env: Env,
+        caller: Address,
+        oracle_config: OracleConfig,
+    ) -> Result<(), Error> {
+        security::require_not_paused(&env)?;
+        admin::require_admin(&env, &caller)?;
+        
+        oracle::Oracle::validate_config(&oracle_config)?;
+        storage::update_oracle_config(&env, &oracle_config)?;
+        
+        Ok(())
+    }
+
+    /// Get price from all active oracles (aggregated)
+    pub fn get_price(
+        env: Env,
+        base_asset: Address,
+        quote_asset: Address,
+        max_age_seconds: u64,
+    ) -> Result<AggregatedPrice, Error> {
+        let oracle_configs = storage::get_active_oracle_configs(&env);
+        let request = PriceFeedRequest {
+            base_asset,
+            quote_asset,
+            max_age_seconds,
+        };
+        
+        oracle::Oracle::get_aggregated_price(&env, &oracle_configs, &request)
+    }
+
+    /// Get price from a specific oracle
+    pub fn get_price_from_oracle(
+        env: Env,
+        oracle_address: Address,
+        base_asset: Address,
+        quote_asset: Address,
+        max_age_seconds: u64,
+    ) -> Result<PriceData, Error> {
+        let oracle_config = storage::get_oracle_config(&env, &oracle_address)?;
+        let request = PriceFeedRequest {
+            base_asset,
+            quote_asset,
+            max_age_seconds,
+        };
+        
+        oracle::Oracle::get_price(&env, &oracle_config, &request)
+    }
+
+    /// Get all oracle configurations
+    pub fn get_oracle_configs(env: Env) -> Vec<OracleConfig> {
+        storage::get_all_oracle_configs(&env)
+    }
+
+    /// Get active oracle configurations
+    pub fn get_active_oracle_configs(env: Env) -> Vec<OracleConfig> {
+        storage::get_active_oracle_configs(&env)
+    }
+
+    /// Convert reward amount using oracle price
+    pub fn convert_reward_amount(
+        env: Env,
+        from_asset: Address,
+        to_asset: Address,
+        amount: i128,
+    ) -> Result<i128, Error> {
+        if from_asset == to_asset {
+            return Ok(amount);
+        }
+
+        let price = Self::get_price(env, from_asset, to_asset, 300)?; // 5 minutes max age
+        
+        // Convert amount using price (assuming 7 decimals)
+        let amount_u256 = U256::from_u128(amount as u128);
+        let converted_amount = (amount_u256 * price.weighted_price) / U256::from_u32(10_000_000); // Adjust for 7 decimals
+        
+        // Convert back to i128 safely
+        let converted_value = converted_amount.to_u128() as i128;
+        Ok(converted_value)
+    }
+
+    /// Validate reward amount against oracle price (anti-manipulation)
+    pub fn validate_reward_amount_with_oracle(
+        env: Env,
+        reward_asset: Address,
+        reward_amount: i128,
+        reference_asset: Address,
+        max_deviation_percent: u32,
+    ) -> Result<(), Error> {
+        let price = Self::get_price(env, reward_asset, reference_asset, 300)?;
+        
+        // Check if price confidence is sufficient
+        if price.confidence_score < 80 {
+            return Err(Error::InsufficientOracleConfidence);
+        }
+        
+        // Additional validation logic could be added here
+        // For example, checking against historical prices, volatility limits, etc.
+        
         Ok(())
     }
 }

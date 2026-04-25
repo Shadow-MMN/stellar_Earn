@@ -57,4 +57,15 @@ pub enum Error {
 
     // Reentrancy
     ReentrantCall = 80,
+
+    // Oracle Errors
+    OracleInactive = 90,
+    NoValidOracleData = 91,
+    InvalidOracleConfiguration = 92,
+    OracleResponseMismatch = 93,
+    StaleOracleData = 94,
+    InvalidOracleData = 95,
+    InsufficientOracleConfidence = 96,
+    OracleAlreadyExists = 97,
+    OracleNotFound = 98,
 }

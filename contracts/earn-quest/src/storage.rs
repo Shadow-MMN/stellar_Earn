@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::types::{Quest, QuestStatus, Submission, SubmissionStatus, UserStats, EscrowInfo, QuestMetadata, PlatformStats, CreatorStats};
+use crate::types::{Quest, QuestStatus, Submission, SubmissionStatus, UserStats, EscrowInfo, QuestMetadata, PlatformStats, CreatorStats, OracleConfig};
 use crate::validation;
 use soroban_sdk::{contracttype, Address, Env, Symbol, Vec, String};
 
@@ -45,6 +45,10 @@ pub enum DataKey {
     QuestIds,
     PlatformStats,
     CreatorStats(Address),
+    /// Oracle configuration, keyed by oracle address
+    OracleConfig(Address),
+    /// List of all oracle addresses
+    OracleAddresses,
     /// Mutex flag set while a non-reentrant entry point is executing.
     ReentrancyGuard,
 }
@@ -886,4 +890,134 @@ pub fn set_creator_stats(env: &Env, creator: &Address, stats: &CreatorStats) {
     env.storage()
         .instance()
         .set(&DataKey::CreatorStats(creator.clone()), stats);
+}
+
+//================================================================================
+// Oracle Storage Functions
+//================================================================================
+
+/// Add a new oracle configuration to storage
+pub fn add_oracle_config(env: &Env, oracle_config: &OracleConfig) -> Result<(), Error> {
+    let oracle_address = oracle_config.oracle_address.clone();
+    
+    // Check if oracle already exists
+    if has_oracle_config(env, &oracle_address) {
+        return Err(Error::OracleAlreadyExists);
+    }
+    
+    // Store the oracle configuration
+    env.storage()
+        .instance()
+        .set(&DataKey::OracleConfig(oracle_address), oracle_config);
+    
+    // Add to the list of oracle addresses
+    let mut oracle_addresses = get_oracle_addresses(env);
+    oracle_addresses.push_back(oracle_address);
+    env.storage()
+        .instance()
+        .set(&DataKey::OracleAddresses, &oracle_addresses);
+    
+    Ok(())
+}
+
+/// Remove an oracle configuration from storage
+pub fn remove_oracle_config(env: &Env, oracle_address: &Address) -> Result<(), Error> {
+    if !has_oracle_config(env, oracle_address) {
+        return Err(Error::OracleNotFound);
+    }
+    
+    // Remove the oracle configuration
+    env.storage()
+        .instance()
+        .remove(&DataKey::OracleConfig(oracle_address.clone()));
+    
+    // Remove from the list of oracle addresses
+    let mut oracle_addresses = get_oracle_addresses(env);
+    let mut new_addresses = Vec::new(env);
+    for addr in oracle_addresses.iter() {
+        if addr != oracle_address {
+            new_addresses.push_back(addr);
+        }
+    }
+    env.storage()
+        .instance()
+        .set(&DataKey::OracleAddresses, &new_addresses);
+    
+    Ok(())
+}
+
+/// Update an existing oracle configuration
+pub fn update_oracle_config(env: &Env, oracle_config: &OracleConfig) -> Result<(), Error> {
+    let oracle_address = oracle_config.oracle_address.clone();
+    
+    if !has_oracle_config(env, &oracle_address) {
+        return Err(Error::OracleNotFound);
+    }
+    
+    // Update the oracle configuration
+    env.storage()
+        .instance()
+        .set(&DataKey::OracleConfig(oracle_address), oracle_config);
+    
+    Ok(())
+}
+
+/// Check if an oracle configuration exists
+pub fn has_oracle_config(env: &Env, oracle_address: &Address) -> bool {
+    env.storage()
+        .instance()
+        .has(&DataKey::OracleConfig(oracle_address.clone()))
+}
+
+/// Get a specific oracle configuration
+pub fn get_oracle_config(env: &Env, oracle_address: &Address) -> Result<OracleConfig, Error> {
+    env.storage()
+        .instance()
+        .get(&DataKey::OracleConfig(oracle_address.clone()))
+        .ok_or(Error::OracleNotFound)
+}
+
+/// Get all oracle configurations
+pub fn get_all_oracle_configs(env: &Env) -> Vec<OracleConfig> {
+    let oracle_addresses = get_oracle_addresses(env);
+    let mut configs = Vec::new(env);
+    
+    for address in oracle_addresses.iter() {
+        if let Ok(config) = get_oracle_config(env, &address) {
+            configs.push_back(config);
+        }
+    }
+    
+    configs
+}
+
+/// Get only active oracle configurations
+pub fn get_active_oracle_configs(env: &Env) -> Vec<OracleConfig> {
+    let all_configs = get_all_oracle_configs(env);
+    let mut active_configs = Vec::new(env);
+    
+    for config in all_configs.iter() {
+        if config.is_active {
+            active_configs.push_back(config.clone());
+        }
+    }
+    
+    active_configs
+}
+
+/// Get all oracle addresses
+pub fn get_oracle_addresses(env: &Env) -> Vec<Address> {
+    env.storage()
+        .instance()
+        .get(&DataKey::OracleAddresses)
+        .unwrap_or_else(|| Vec::new(env))
+}
+
+/// Initialize oracle storage (if needed)
+pub fn initialize_oracle_storage(env: &Env) {
+    if !env.storage().instance().has(&DataKey::OracleAddresses) {
+        env.storage()
+            .instance()
+            .set(&DataKey::OracleAddresses, &Vec::new(env));
+    }
 }

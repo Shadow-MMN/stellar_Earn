@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, BytesN, String, Symbol, Vec};
+use soroban_sdk::{contracttype, Address, BytesN, String, Symbol, Vec, U256};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -152,4 +152,72 @@ pub struct PlatformStats {
     pub total_rewards_distributed: u128,
     pub total_active_users: u64,
     pub total_rewards_claimed: u64,
+}
+
+//================================================================================
+// Oracle Types and Interface
+//================================================================================
+
+/// Price data from an oracle
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PriceData {
+    pub base_asset: Address,
+    pub quote_asset: Address,
+    pub price: U256,
+    pub decimals: u32,
+    pub timestamp: u64,
+    pub confidence: u32, // 0-100 percentage confidence score
+}
+
+/// Oracle provider types
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum OracleType {
+    StellarAsset,
+    StellarOracle,
+    Custom,
+}
+
+/// Oracle configuration
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OracleConfig {
+    pub oracle_address: Address,
+    pub oracle_type: OracleType,
+    pub max_age_seconds: u64,
+    pub min_confidence: u32,
+    pub is_active: bool,
+}
+
+/// Price feed request
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PriceFeedRequest {
+    pub base_asset: Address,
+    pub quote_asset: Address,
+    pub max_age_seconds: u64,
+}
+
+/// Oracle response wrapper
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OracleResponse {
+    pub price_data: PriceData,
+    pub oracle_address: Address,
+    pub response_timestamp: u64,
+}
+
+/// Oracle aggregation result for multiple sources
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AggregatedPrice {
+    pub base_asset: Address,
+    pub quote_asset: Address,
+    pub weighted_price: U256,
+    pub decimals: u32,
+    pub sources_used: u32,
+    pub total_sources: u32,
+    pub confidence_score: u32,
+    pub timestamp: u64,
 }

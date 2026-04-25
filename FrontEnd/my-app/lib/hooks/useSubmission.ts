@@ -89,10 +89,15 @@ export function useSubmission({
   );
   const [submissionError, setSubmissionError] = useState<Error | null>(null);
 
-  // Check if wallet is connected (simplified - in real app would use wallet context)
-  const isWalletConnected = useCallback(() => {
-    if (typeof window === 'undefined') return false;
-    return !!(localStorage.getItem('authToken') || sessionStorage.getItem('authToken'));
+  // Check if wallet is connected - make a profile request to verify authentication
+  const isWalletConnected = useCallback(async () => {
+    try {
+      const { apiClient } = await import('../api/client');
+      await apiClient.get('/auth/profile');
+      return true;
+    } catch {
+      return false;
+    }
   }, []);
 
   const updateField = useCallback(
@@ -182,7 +187,8 @@ export function useSubmission({
   const submit = useCallback(async () => {
     if (!validateCurrentStep()) return;
 
-    if (!isWalletConnected()) {
+    const walletConnected = await isWalletConnected();
+    if (!walletConnected) {
       setSubmissionError(new Error('Please connect your wallet to submit'));
       setCurrentStep('error');
       return;

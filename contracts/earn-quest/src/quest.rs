@@ -44,7 +44,7 @@ pub fn register_quest(
     };
 
     storage::set_quest(env, id, &quest);
-    storage::add_quest_id(env, id);
+    storage::add_quest_id(env, id)?;
 
     events::quest_registered(
         env,
@@ -202,7 +202,7 @@ pub fn get_quests_by_status(
 
     // Optimized: cache status reference and avoid redundant lookups
     for i in 0..ids.len() {
-        if count >= limit {
+        if i >= validation::MAX_SCAN_ITERATIONS || count >= limit {
             break;
         }
         let id = ids.get(i).unwrap();
@@ -236,7 +236,7 @@ pub fn get_quests_by_creator(
 
     // Optimized: cache creator reference
     for i in 0..ids.len() {
-        if count >= limit {
+        if i >= validation::MAX_SCAN_ITERATIONS || count >= limit {
             break;
         }
         let id = ids.get(i).unwrap();
@@ -271,7 +271,7 @@ pub fn get_quests_by_reward_range(
     let mut count = 0u32;
 
     for i in 0..ids.len() {
-        if count >= limit {
+        if i >= validation::MAX_SCAN_ITERATIONS || count >= limit {
             break;
         }
         let id = ids.get(i).unwrap();

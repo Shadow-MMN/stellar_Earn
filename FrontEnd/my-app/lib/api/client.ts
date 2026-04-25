@@ -2,7 +2,7 @@
  * Axios-based HTTP client for the StellarEarn API.
  *
  * Features:
- *  - Automatic Authorization header injection
+ *  - Uses httpOnly cookies for secure token storage (no localStorage)
  *  - Transparent JWT access-token refresh on 401 (with request queuing)
  *  - Configurable retry with exponential back-off for network / 5xx errors
  *  - Per-request cancellation via AbortController
@@ -34,52 +34,16 @@ const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY_MS = 1_000;
 
 // ---------------------------------------------------------------------------
-// Token management
+// Token management (cookies only - no localStorage for tokens)
 // ---------------------------------------------------------------------------
-
-/** Keys used to persist auth tokens in localStorage / sessionStorage */
-const ACCESS_TOKEN_KEY = 'authToken'; // keep backward compat with existing code
-const REFRESH_TOKEN_KEY = 'refreshToken';
-const TOKEN_EXPIRES_IN_KEY = 'tokenExpiresIn';
 
 function isClient(): boolean {
   return typeof window !== 'undefined';
 }
 
 export const tokenManager = {
-  getAccessToken(): string | null {
-    if (!isClient()) return null;
-    return (
-      localStorage.getItem(ACCESS_TOKEN_KEY) ||
-      sessionStorage.getItem(ACCESS_TOKEN_KEY)
-    );
-  },
-
-  getRefreshToken(): string | null {
-    if (!isClient()) return null;
-    return (
-      localStorage.getItem(REFRESH_TOKEN_KEY) ||
-      sessionStorage.getItem(REFRESH_TOKEN_KEY)
-    );
-  },
-
-  setTokens(tokens: AuthTokens): void {
-    if (!isClient()) return;
-    localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
-    if (tokens.expiresIn !== undefined) {
-      localStorage.setItem(TOKEN_EXPIRES_IN_KEY, tokens.expiresIn.toString());
-    }
-  },
-
   clearTokens(): void {
     if (!isClient()) return;
-    localStorage.removeItem(ACCESS_TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(TOKEN_EXPIRES_IN_KEY);
-    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
-    sessionStorage.removeItem(TOKEN_EXPIRES_IN_KEY);
   },
 };
 
@@ -110,9 +74,38 @@ function processQueue(error: unknown, token: string | null = null): void {
 // Error transformation
 // ---------------------------------------------------------------------------
 
-function transformAxiosError(error: AxiosError<ApiErrorResponse>): AppError {
+function isAxiosError(error: unknown): error is AxiosError {
+  return error !== null && typeof error === 'object' && 'isAxiosError' in error;
+}
+
+function hasApiErrorResponse(error: AxiosError): error is AxiosError<ApiErrorResponse> {
+  return error.response?.data !== undefined && 
+         typeof error.response.data === 'object' &&
+         ('statusCode' in error.response.data || 'message' in error.response.data);
+}
+
+function transformAxiosError(error: unknown): AppError {
+  if (!isAxiosError(error)) {
+    // Non-Axios error
+    let errorMessage = 'An unexpected error occurred';
+    
+    if (error && typeof error === 'object') {
+      if ('message' in error) {
+        errorMessage = String((error as { message: unknown }).message);
+      }
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    
+    return createAppError(
+      errorMessage,
+      ERROR_CODES.SERVER_ERROR,
+      0,
+    );
+  }
+
   const status = error.response?.status;
-  const data = error.response?.data;
+  const data = hasApiErrorResponse(error) ? error.response.data : undefined;
 
   const message = Array.isArray(data?.message)
     ? data.message.join('; ')
@@ -164,71 +157,59 @@ export const apiClient: AxiosInstance = axios.create({
   baseURL: `${BASE_URL}/api/${API_VERSION}`,
   timeout: DEFAULT_TIMEOUT_MS,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
 // ---------------------------------------------------------------------------
-// Request interceptor – inject access token
+// Request interceptor – cookies are sent automatically
 // ---------------------------------------------------------------------------
 
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    const token = tokenManager.getAccessToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
     return config;
   },
-  (error: AxiosError<ApiErrorResponse>) => Promise.reject(transformAxiosError(error)),
+  (error: unknown) => Promise.reject(transformAxiosError(error)),
 );
 
 // ---------------------------------------------------------------------------
-// Response interceptor – handle 401 with token refresh
+// Response interceptor – handle 401 with token refresh via cookies
 // ---------------------------------------------------------------------------
 
 apiClient.interceptors.response.use(
-  (response) => response,
-  async (error: AxiosError<ApiErrorResponse>) => {
+  (response: any) => response,
+  async (error: unknown) => {
+    if (!isAxiosError(error)) {
+      return Promise.reject(transformAxiosError(error));
+    }
+
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // Token refresh on 401
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // Queue request until refresh completes
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return apiClient(originalRequest);
-          })
+          .then(() => apiClient(originalRequest))
           .catch((err) => Promise.reject(err));
       }
 
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = tokenManager.getRefreshToken();
-      if (!refreshToken) {
-        tokenManager.clearTokens();
-        processQueue(error, null);
-        isRefreshing = false;
-        return Promise.reject(transformAxiosError(error));
-      }
-
       try {
-        const { data } = await axios.post<AuthTokens>(
+        await axios.post(
           `${BASE_URL}/api/${API_VERSION}/auth/refresh`,
-          { refreshToken },
-          { timeout: DEFAULT_TIMEOUT_MS },
+          {},
+          {
+            timeout: DEFAULT_TIMEOUT_MS,
+            withCredentials: true,
+          },
         );
-        tokenManager.setTokens(data);
-        processQueue(null, data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+        processQueue(null, 'refreshed');
         return apiClient(originalRequest);
       } catch (refreshError) {
-        tokenManager.clearTokens();
         processQueue(refreshError, null);
         return Promise.reject(refreshError);
       } finally {
@@ -245,9 +226,9 @@ apiClient.interceptors.response.use(
 // ---------------------------------------------------------------------------
 
 function isRetryableError(error: unknown): boolean {
-  const axiosErr = error as AxiosError;
-  if (!axiosErr.response) return true; // network error
-  const status = axiosErr.response.status;
+  if (!isAxiosError(error)) return false; // non-Axios errors are not retryable
+  if (!error.response) return true; // network error
+  const status = error.response.status;
   return status >= 500 && status !== 501;
 }
 
@@ -358,4 +339,4 @@ export async function del<T = void>(
   return data;
 }
 
-export { DEFAULT_TIMEOUT_MS, MAX_RETRIES };
+export { transformAxiosError, DEFAULT_TIMEOUT_MS, MAX_RETRIES };

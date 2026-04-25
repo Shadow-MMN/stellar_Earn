@@ -5,6 +5,7 @@ import {
   extractPlainTextFromHtml,
   formatWizardDateTime,
 } from "@/lib/schemas/quest.schema";
+import { sanitizeRichHtml } from "@/lib/utils/sanitize";
 
 interface QuestPreviewProps {
   data: QuestWizardData;
@@ -45,12 +46,14 @@ const QuestPreview = ({ data, verifierAddress }: QuestPreviewProps) => {
           <h4 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Description
           </h4>
-          {hasDescription ? (
-            <div
-              className="prose prose-sm mt-2 max-w-none text-zinc-700 dark:prose-invert dark:text-zinc-200"
-              dangerouslySetInnerHTML={{ __html: data.basics.description }}
-            />
-          ) : (
+{hasDescription ? (
+              <div
+                className="prose prose-sm mt-2 max-w-none text-zinc-700 dark:prose-invert dark:text-zinc-200"
+                dangerouslySetInnerHTML={{
+                  __html: sanitizeRichHtml(data.basics.description),
+                }}
+              />
+            ) : (
             <div className="prose prose-sm mt-2 max-w-none text-zinc-700 dark:prose-invert dark:text-zinc-200">
               No full description provided yet.
             </div>

@@ -3,7 +3,7 @@
 use soroban_sdk::testutils::Events as _;
 use soroban_sdk::token::{StellarAssetClient, TokenClient};
 use soroban_sdk::{
-    symbol_short, testutils::Address as _, Address, BytesN, Env, IntoVal, Symbol, Vec,
+    symbol_short, testutils::Address as _, Address, BytesN, Env, IntoVal, Symbol, Vec, TryFromVal,
 };
 
 extern crate earn_quest;
@@ -159,11 +159,12 @@ fn test_register_quests_batch_emits_events() {
         reg_count >= 2,
         "expected at least 2 quest_reg events, got {}",
         reg_count
+    );
     let reg_events = events
         .iter()
         .filter(|e| {
             let topics = &e.1;
-            let t0: Symbol = Symbol::try_from_val(&env, &topics.get(0).unwrap()).unwrap();
+            let t0: Symbol = Symbol::from_val(&env, &topics.get(0).unwrap());
             t0 == symbol_short!("quest_reg")
         })
         .count();
@@ -348,11 +349,14 @@ fn test_approve_submissions_batch_emits_events() {
     }
     assert!(
         appr_count >= 1,
+        "expected at least 1 submission_approved event, got {}",
+        appr_count
+    );
     let appr_events = events
         .iter()
         .filter(|e| {
             let topics = &e.1;
-            let t0: Symbol = Symbol::try_from_val(&env, &topics.get(0).unwrap()).unwrap();
+            let t0: Symbol = Symbol::from_val(&env, &topics.get(0).unwrap());
             t0 == symbol_short!("sub_appr")
         })
         .count();

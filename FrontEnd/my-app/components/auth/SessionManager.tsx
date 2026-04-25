@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { tokenManager } from "../../lib/api/client";
+import { apiClient } from "../../lib/api/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, RefreshCw, LogOut } from "lucide-react";
 
 /**
  * SessionManager handles:
- * 1. Auto-refreshing tokens before they expire
+ * 1. Auto-refreshing tokens before they expire (via /auth/profile calls)
  * 2. Monitoring authentication status
  * 3. Showing session timeout warnings
  */
@@ -21,9 +21,9 @@ export function SessionManager() {
   const warningTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Constants for session management
+  // Access token is 15 minutes, refresh before that
   const REFRESH_BEFORE_EXPIRY = 60 * 1000; // 1 minute before access token expiry
-  const DEFAULT_ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 minutes fallback
-  const WARNING_BEFORE_LOGOUT = 2 * 60 * 1000; // 2 minutes before refresh token/session might end
+  const DEFAULT_ACCESS_TOKEN_LIFETIME = 15 * 60 * 1000; // 15 minutes
 
   useEffect(() => {
     const setupTimers = () => {
@@ -33,15 +33,8 @@ export function SessionManager() {
       if (refreshInterval.current) clearInterval(refreshInterval.current);
       if (warningTimeout.current) clearTimeout(warningTimeout.current);
 
-      // Proactive refresh logic
-      const tokens = tokenManager.getAccessToken() ? { 
-        accessToken: tokenManager.getAccessToken()!, 
-        refreshToken: tokenManager.getRefreshToken()!,
-        expiresIn: Number(localStorage.getItem('tokenExpiresIn')) || DEFAULT_ACCESS_TOKEN_LIFETIME
-      } : null;
-
-      const lifetime = tokens?.expiresIn || DEFAULT_ACCESS_TOKEN_LIFETIME;
-      const refreshTime = Math.max(lifetime - REFRESH_BEFORE_EXPIRY, 30000); // At least 30s
+      const lifetime = DEFAULT_ACCESS_TOKEN_LIFETIME;
+      const refreshTime = Math.max(lifetime - REFRESH_BEFORE_EXPIRY, 30000);
 
       refreshInterval.current = setInterval(async () => {
         setIsRefreshing(true);
@@ -53,9 +46,6 @@ export function SessionManager() {
           setIsRefreshing(false);
         }
       }, refreshTime);
-
-      // Set a warning if no activity or nearing session end
-      // (This is a simplified version, real implementations might parse JWT exp)
     };
 
     setupTimers();
@@ -65,18 +55,6 @@ export function SessionManager() {
       if (warningTimeout.current) clearTimeout(warningTimeout.current);
     };
   }, [isAuthenticated, refreshProfile]);
-
-  // Handle logout on unauthorized errors (handled by interceptors mostly, but here as backup)
-  useEffect(() => {
-    const handleUnauthorized = () => {
-      if (isAuthenticated && !tokenManager.getAccessToken()) {
-        logout();
-      }
-    };
-    
-    window.addEventListener('storage', handleUnauthorized);
-    return () => window.removeEventListener('storage', handleUnauthorized);
-  }, [isAuthenticated, logout]);
 
   return (
     <>

@@ -86,10 +86,35 @@ export class UsersService {
     return savedUser;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    if (!email) {
+      return null;
+    }
+
+    return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async findByGoogleId(googleId: string): Promise<User | null> {
+    if (!googleId) {
+      return null;
+    }
+
+    return this.usersRepository.findOne({ where: { googleId } });
+  }
+
+  async findByGithubId(githubId: string): Promise<User | null> {
+    if (!githubId) {
+      return null;
+    }
+
+    return this.usersRepository.findOne({ where: { githubId } });
+  }
+
   async findByAddress(address: string): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { stellarAddress: address },
       relations: ['createdQuests'],
+      withDeleted: false,
     });
 
     if (!user) {
@@ -102,6 +127,7 @@ export class UsersService {
   async findByUsername(username: string): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { username },
+      withDeleted: false,
     });
 
     if (!user) {
@@ -114,6 +140,7 @@ export class UsersService {
   async findById(id: string): Promise<User> {
     const user = await this.usersRepository.findOne({
       where: { id },
+      withDeleted: false,
     });
 
     if (!user) {
@@ -213,11 +240,13 @@ export class UsersService {
       streak = diffDays <= 1 ? consecutive : 0;
     }
 
-    // Get user rank
-    const allUsers = await this.usersRepository.find({
-      order: { xp: 'DESC' },
-    });
-    const rank = allUsers.findIndex((u) => u.id === user.id) + 1;
+    // Get user rank via a single COUNT query instead of loading every user
+    // from the table just to find one user's position.
+    const higherRanked = await this.usersRepository
+      .createQueryBuilder('user')
+      .where('user.xp > :xp', { xp: user.xp })
+      .getCount();
+    const rank = higherRanked + 1;
 
     const stats: UserStats = {
       totalQuests: submissions.length,
@@ -495,7 +524,8 @@ totalEarned: user.totalEarned,
       throw new BadRequestException('You can only delete your own account');
     }
 
-    await this.usersRepository.remove(userToDelete);
+    // Soft delete by setting deletedAt
+    await this.usersRepository.softDelete(userToDelete.id);
 
     // Clear caches
     await this.cacheManager.del(`user_stats_${address}`);

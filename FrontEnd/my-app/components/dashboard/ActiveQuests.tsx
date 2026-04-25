@@ -1,6 +1,7 @@
 'use client';
 
 import type { Quest } from '@/lib/types/dashboard';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface ActiveQuestsProps {
   quests: Quest[];
@@ -17,20 +18,6 @@ interface SimpleQuest {
   reward: number;
 }
 
-function QuestRowSkeleton() {
-  return (
-    <div className="flex items-center justify-between py-4 border-b border-zinc-200 dark:border-zinc-800 last:border-0">
-      <div className="flex-1">
-        <div className="h-5 w-48 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700 mb-2" />
-        <div className="h-4 w-20 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="h-6 w-20 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
-        <div className="h-5 w-16 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: QuestStatus }) {
   const statusConfig = {
@@ -110,11 +97,7 @@ export function ActiveQuests({ quests, isLoading }: ActiveQuestsProps) {
       </div>
 
       {isLoading ? (
-        <div>
-          <QuestRowSkeleton />
-          <QuestRowSkeleton />
-          <QuestRowSkeleton />
-        </div>
+        <Skeleton.List items={3} />
       ) : simpleQuests.length === 0 ? (
         <EmptyState />
       ) : (

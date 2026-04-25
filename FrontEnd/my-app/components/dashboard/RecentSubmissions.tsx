@@ -1,7 +1,7 @@
 'use client';
-
 import type { Submission } from '@/lib/types/submission';
 import type { SubmissionStatus } from '@/lib/types/api.types';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface RecentSubmissionsProps {
   submissions: Submission[];
@@ -39,24 +39,6 @@ function formatDate(dateString: string): string {
   });
 }
 
-function SubmissionRowSkeleton() {
-  return (
-    <tr className="border-b border-zinc-100 dark:border-zinc-800">
-      <td className="py-3 pr-4">
-        <div className="h-5 w-40 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      </td>
-      <td className="py-3 pr-4">
-        <div className="h-5 w-20 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
-      </td>
-      <td className="py-3 pr-4">
-        <div className="h-5 w-16 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      </td>
-      <td className="py-3">
-        <div className="h-5 w-24 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-      </td>
-    </tr>
-  );
-}
 
 function StatusBadge({ status }: { status: Submission['status'] }) {
   const statusConfig = {
@@ -178,9 +160,22 @@ export function RecentSubmissions({ submissions, isLoading }: RecentSubmissionsP
               </tr>
             </thead>
             <tbody>
-              <SubmissionRowSkeleton />
-              <SubmissionRowSkeleton />
-              <SubmissionRowSkeleton />
+              {Array.from({ length: 3 }).map((_, index) => (
+                <tr key={index} className="border-b border-zinc-100 dark:border-zinc-800">
+                  <td className="py-3 pr-4">
+                    <Skeleton.Text className="h-5 w-40" />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <Skeleton.Text className="h-5 w-20 rounded-full" />
+                  </td>
+                  <td className="py-3 pr-4">
+                    <Skeleton.Text className="h-5 w-16" />
+                  </td>
+                  <td className="py-3">
+                    <Skeleton.Text className="h-5 w-24" />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

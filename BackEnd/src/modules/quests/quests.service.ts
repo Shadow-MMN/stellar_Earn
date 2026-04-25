@@ -14,14 +14,14 @@ import { QueryQuestsDto } from './dto/query-quests.dto';
 import {
   QuestResponseDto,
   PaginatedQuestsResponseDto,
-} from './dto/quest-response.dto';
+  QuestCreatedEvent,
+  QuestUpdatedEvent,
+  QuestDeletedEvent,
+} from './dto';
 import { CacheService } from '../cache/cache.service';
 import { CACHE_KEYS, CACHE_TTL } from '../../config/cache.config';
 
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { QuestCreatedEvent } from '../../events/dto/quest-created.event';
-import { QuestDeletedEvent } from '../../events/dto/quest-deleted.event';
-import { QuestUpdatedEvent } from '../../events/dto/quest-updated.event';
 import { ModerationService } from '../moderation/moderation.service';
 
 @Injectable()
@@ -130,6 +130,9 @@ export class QuestsService {
 
     const queryBuilder = this.questRepository.createQueryBuilder('quest');
 
+    // Exclude soft-deleted quests by default
+    queryBuilder.andWhere('quest.deletedAt IS NULL');
+
     if (status) {
       queryBuilder.andWhere('quest.status = :status', { status });
     }
@@ -192,7 +195,10 @@ export class QuestsService {
       return cached;
     }
 
-    const quest = await this.questRepository.findOne({ where: { id } });
+    const quest = await this.questRepository.findOne({ 
+      where: { id },
+      withDeleted: false,
+    });
 
     if (!quest) {
       throw new NotFoundException(`Quest with ID ${id} not found`);
@@ -211,7 +217,10 @@ export class QuestsService {
     updateQuestDto: UpdateQuestDto,
     userAddress: string,
   ): Promise<QuestResponseDto> {
-    const quest = await this.questRepository.findOne({ where: { id } });
+    const quest = await this.questRepository.findOne({ 
+      where: { id },
+      withDeleted: false,
+    });
 
     if (!quest) {
       throw new NotFoundException(`Quest with ID ${id} not found`);
@@ -276,7 +285,10 @@ export class QuestsService {
   }
 
   async remove(id: string, userAddress: string): Promise<void> {
-    const quest = await this.questRepository.findOne({ where: { id } });
+    const quest = await this.questRepository.findOne({ 
+      where: { id },
+      withDeleted: false,
+    });
 
     if (!quest) {
       throw new NotFoundException(`Quest with ID ${id} not found`);
@@ -286,7 +298,8 @@ export class QuestsService {
       throw new ForbiddenException('You can only delete quests you created');
     }
 
-    await this.questRepository.remove(quest);
+    // Soft delete the quest
+    await this.questRepository.softDelete(quest.id);
 
     // Emit quest deleted event
     this.eventEmitter.emit(

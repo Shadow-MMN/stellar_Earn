@@ -254,12 +254,14 @@ impl EarnQuestContract {
     /// Only the submitter can open a dispute. They must have a submission
     /// on this quest that was previously rejected. The dispute is assigned
     /// to an arbitrator (could be the verifier or a designated third party).
+    ///
+    /// Returns the created Dispute record.
     pub fn open_dispute(
         env: Env,
         quest_id: Symbol,
         initiator: Address,
         arbitrator: Address,
-    ) -> Result<(), Error> {
+    ) -> Result<Dispute, Error> {
         security::require_not_paused(&env)?;
         dispute::open_dispute(&env, quest_id, initiator, arbitrator)
     }
